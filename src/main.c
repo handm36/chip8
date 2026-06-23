@@ -79,7 +79,9 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
-  render_frame(&chip8_state);
+  if (render_frame(&chip8_state) == SDL_APP_FAILURE)
+    return SDL_APP_FAILURE;
+
   return SDL_APP_CONTINUE;
 }
 
