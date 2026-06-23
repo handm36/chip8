@@ -42,7 +42,7 @@ static SDL_AppResult parse_file(char *path) {
   }
   fseek(file_ptr, 0, SEEK_SET);
 
-  size_t ret = fread(&(chip8_state.ram[0x200]), 1, TOTAL_ROM_MEMORY, file_ptr);
+  size_t ret = fread(&(chip8_state.ram[0x200]), 1, size, file_ptr);
   if (ret != size) {
     fclose(file_ptr);
     SDL_Log("Failed to read file\n");
@@ -67,6 +67,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
   if (init_display() == SDL_APP_FAILURE) {
     return SDL_APP_FAILURE;
   }
+
+  populate_chip8_state(&chip8_state);
 
   return SDL_APP_CONTINUE;
 }

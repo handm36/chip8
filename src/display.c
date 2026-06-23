@@ -1,10 +1,7 @@
 #include "display.h"
 #include "chip8.h"
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_init.h>
-#include <SDL3/SDL_pixels.h>
 #include <SDL3/SDL_render.h>
-#include <SDL3/SDL_stdinc.h>
 #include <stdint.h>
 
 static SDL_Window *window = NULL;
@@ -42,7 +39,7 @@ int init_display() {
                                    SDL_LOGICAL_PRESENTATION_LETTERBOX);
 
   texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
-                              SDL_TEXTUREACCESS_TARGET, DISPLAY_WIDTH,
+                              SDL_TEXTUREACCESS_STREAMING, DISPLAY_WIDTH,
                               DISPLAY_HEIGHT);
 
   return SDL_APP_CONTINUE;

@@ -7,7 +7,7 @@
 #define DISPLAY_WIDTH 64
 #define DISPLAY_HEIGHT 32
 #define TOTAL_ROM_MEMORY                                                       \
-  0x1000 - 0x200 // 0x1000 - 0x200 is the total memory for the rom available
+  (0x1000 - 0x200) // 0x1000 - 0x200 is the total memory for the rom available
 
 typedef struct {
   uint64_t display[DISPLAY_HEIGHT]; // 64x32 display for the normal chip8
@@ -20,3 +20,5 @@ typedef struct {
   uint8_t delay;
   uint8_t sound;
 } Chip8_state;
+
+void populate_chip8_state(Chip8_state *chip8_state);
