@@ -12,6 +12,7 @@
 #include <stdio.h>
 
 Chip8_state chip8_state = {0};
+uint64_t last_time;
 
 static SDL_AppResult parse_file(char *path) {
   FILE *file_ptr = fopen(path, "rb");
@@ -53,6 +54,20 @@ static SDL_AppResult parse_file(char *path) {
   return SDL_APP_CONTINUE;
 }
 
+void update_timers() {
+  uint64_t curr_time = SDL_GetTicks();
+  // 1000ms per 60hz
+  if (curr_time > last_time + (1000 / 60)) {
+    last_time = curr_time;
+
+    if (chip8_state.sound != 0)
+      chip8_state.sound = chip8_state.sound - 1;
+
+    if (chip8_state.delay != 0)
+      chip8_state.delay = chip8_state.delay - 1;
+  }
+}
+
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
   if (argc != 2) {
     SDL_Log("Usage: %s <rom file>\n", argv[0]);
@@ -69,6 +84,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
   }
 
   populate_chip8_state(&chip8_state);
+  last_time = SDL_GetTicks();
 
   return SDL_APP_CONTINUE;
 }
@@ -83,6 +99,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 SDL_AppResult SDL_AppIterate(void *appstate) {
   if (render_frame(&chip8_state) == SDL_APP_FAILURE)
     return SDL_APP_FAILURE;
+
+  update_timers();
 
   return SDL_APP_CONTINUE;
 }
