@@ -17,7 +17,7 @@ static void bitmap_to_RGBA(uint64_t display[DISPLAY_HEIGHT],
     bitmap = 0x8000000000000000; // start at binary 100000...
     for (int j = 0; j < DISPLAY_WIDTH; j++) {
       temp = !!(display[i] & bitmap);
-      (*pixels)[i * DISPLAY_WIDTH + j] = (temp ? COLOR_HEX : 0x000000FF);
+      (*pixels)[i * DISPLAY_WIDTH + j] = (temp ? COLOR_HEX : BACKGROUND_HEX);
       bitmap = bitmap >> 1;
     }
   }

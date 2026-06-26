@@ -1,3 +1,5 @@
+#include <SDL3/SDL_timer.h>
+#include <sys/types.h>
 #define SDL_MAIN_USE_CALLBACKS 1
 #include "audio.h"
 #include "chip8.h"
@@ -12,7 +14,7 @@
 #include <stdio.h>
 
 Chip8_state chip8_state = {0};
-uint64_t last_time;
+uint64_t last_time_timers;
 
 static SDL_AppResult parse_file(char *path) {
   FILE *file_ptr = fopen(path, "rb");
@@ -57,8 +59,8 @@ static SDL_AppResult parse_file(char *path) {
 void update_timers() {
   uint64_t curr_time = SDL_GetTicks();
   // 1000ms per 60hz
-  if (curr_time > last_time + (1000 / 60)) {
-    last_time = curr_time;
+  if (curr_time > last_time_timers + (1000 / 60)) {
+    last_time_timers = curr_time;
 
     if (chip8_state.sound != 0)
       chip8_state.sound = chip8_state.sound - 1;
@@ -84,7 +86,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
   }
 
   populate_chip8_state(&chip8_state);
-  last_time = SDL_GetTicks();
+  last_time_timers = SDL_GetTicks();
 
   return SDL_APP_CONTINUE;
 }
@@ -97,10 +99,14 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
+  // Temporary until i fix the clockspeed
+  SDL_Delay(10);
+
   if (render_frame(&chip8_state) == SDL_APP_FAILURE)
     return SDL_APP_FAILURE;
 
   update_timers();
+  run_cpu(&chip8_state);
 
   return SDL_APP_CONTINUE;
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 
+#define CLOCK_SPEED 600 // in hz
 #define RAM_SIZE 4096
 #define STACK_SIZE 16
 #define REGISTER_SIZE 16
