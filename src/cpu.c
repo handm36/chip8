@@ -120,6 +120,13 @@ void run_cpu(Chip8_state *chip8_state) {
           chip8_state->V[second_4_bits_instruction] -
           chip8_state->V[third_4_bits_instruction];
       break;
+    case 6:
+      // 8xy6 shift right
+      // VF is set to the last bit before the right shift
+      chip8_state->V[0xF] = chip8_state->V[third_4_bits_instruction] & 0x1;
+      chip8_state->V[second_4_bits_instruction] =
+          chip8_state->V[third_4_bits_instruction] >> 1;
+      break;
     case 7:
       // 8xy7 - Vx = Vy - Vx
       if (chip8_state->V[second_4_bits_instruction] <
@@ -131,6 +138,13 @@ void run_cpu(Chip8_state *chip8_state) {
       chip8_state->V[second_4_bits_instruction] =
           chip8_state->V[third_4_bits_instruction] -
           chip8_state->V[second_4_bits_instruction];
+      break;
+    case 0xE:
+      // 8xyE shift left
+      // VF is set to the first bit before the left shift
+      chip8_state->V[0xF] = chip8_state->V[third_4_bits_instruction] & 0x80;
+      chip8_state->V[second_4_bits_instruction] =
+          chip8_state->V[third_4_bits_instruction] << 1;
       break;
     }
     break;
@@ -153,11 +167,11 @@ void run_cpu(Chip8_state *chip8_state) {
         y = y - DISPLAY_HEIGHT;
 
       // 64 - 8 = 56
-      translated_sprite = ((uint64_t)sprite << (56 - Vx));
+      translated_sprite = ((uint64_t)sprite << 56) >> Vx;
 
       if (Vx > (56 - 1)) {
         translated_sprite = translated_sprite | (uint64_t)sprite
-                                                    << (63 - (Vx - 56));
+                                                    << (64 - (Vx - 56));
       }
       // collision check if Xor'd == Or'd then there isnt collision
       if ((chip8_state->display[y] ^ translated_sprite) !=
@@ -170,8 +184,34 @@ void run_cpu(Chip8_state *chip8_state) {
   case 0xF:
     switch (second_byte_instruction) {
     case 0x1E:
+      // Fx1E I = I + Vx
       chip8_state->I =
           chip8_state->I + chip8_state->V[second_4_bits_instruction];
+      break;
+    case 0x33:
+      // Fx33 place the ones in I+2, the tens in I+1, and the hundreds in I of
+      // the decimal value of Vx
+      chip8_state->ram[chip8_state->I + 2] =
+          chip8_state->V[second_4_bits_instruction] % 10;
+      chip8_state->ram[chip8_state->I + 1] =
+          (chip8_state->V[second_4_bits_instruction] / 10) % 10;
+      chip8_state->ram[chip8_state->I] =
+          (chip8_state->V[second_4_bits_instruction] / 100) % 10;
+
+      break;
+    case 0x55:
+      // Fx55 fill I with V0 to Vx recursively
+      for (int i = 0; i <= second_4_bits_instruction; i++)
+        chip8_state->ram[chip8_state->I + i] = chip8_state->V[i];
+
+      chip8_state->I = chip8_state->I + second_4_bits_instruction + 1;
+      break;
+    case 0x65:
+      // Fx65 fill V0 to Vx with I recursively
+      for (int i = 0; i <= second_4_bits_instruction; i++)
+        chip8_state->V[i] = chip8_state->ram[chip8_state->I + i];
+
+      chip8_state->I = chip8_state->I + second_4_bits_instruction + 1;
       break;
     }
     break;
