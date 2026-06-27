@@ -2,6 +2,7 @@
 #include "chip8.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_render.h>
+#include <SDL3/SDL_surface.h>
 #include <stdint.h>
 
 static SDL_Window *window = NULL;
@@ -41,6 +42,7 @@ int init_display() {
   texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888,
                               SDL_TEXTUREACCESS_STREAMING, DISPLAY_WIDTH,
                               DISPLAY_HEIGHT);
+  SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
 
   return SDL_APP_CONTINUE;
 }

@@ -38,7 +38,8 @@ static SDL_AppResult parse_file(char *path) {
   }
 
   // check if the file is correct and it fits into memory
-  if ((size == 0) || (size > TOTAL_ROM_MEMORY) || (size % 2 != 0)) {
+  // removed the (size % 2 != 0) because of the corax rom
+  if ((size == 0) || (size > TOTAL_ROM_MEMORY)) {
     fclose(file_ptr);
     SDL_Log("Invalid Chip8 rom file\n");
     return SDL_APP_FAILURE;
