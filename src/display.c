@@ -1,6 +1,7 @@
 #include "display.h"
 #include "chip8.h"
 #include <SDL3/SDL.h>
+#include <SDL3/SDL_init.h>
 #include <SDL3/SDL_render.h>
 #include <SDL3/SDL_surface.h>
 #include <stdint.h>
@@ -25,11 +26,6 @@ static void bitmap_to_RGBA(uint64_t display[DISPLAY_HEIGHT],
 }
 
 int init_display() {
-  if (!SDL_Init(SDL_INIT_VIDEO)) {
-    SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
-    return SDL_APP_FAILURE;
-  }
-
   if (!SDL_CreateWindowAndRenderer("Chip 8", DISPLAY_WIDTH * 10,
                                    DISPLAY_HEIGHT * 10, SDL_WINDOW_RESIZABLE,
                                    &window, &renderer)) {

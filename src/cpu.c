@@ -183,6 +183,10 @@ void run_cpu(Chip8_state *chip8_state) {
     break;
   case 0xF:
     switch (second_byte_instruction) {
+    case 0x18:
+      // Fx18 sound = Vx
+      chip8_state->sound = chip8_state->V[second_4_bits_instruction];
+      break;
     case 0x1E:
       // Fx1E I = I + Vx
       chip8_state->I =

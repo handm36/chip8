@@ -72,6 +72,11 @@ void update_timers() {
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
+  if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
+    SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
+    return SDL_APP_FAILURE;
+  }
+
   if (argc != 2) {
     SDL_Log("Usage: %s <rom file>\n", argv[0]);
     return SDL_APP_FAILURE;
@@ -89,6 +94,9 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
   populate_chip8_state(&chip8_state);
   last_time_timers = SDL_GetTicks();
 
+  if (init_buzzer() == SDL_APP_FAILURE)
+    return SDL_APP_FAILURE;
+
   return SDL_APP_CONTINUE;
 }
 
@@ -100,6 +108,8 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
+  if (chip8_state.sound != 0)
+    play_buzzer(&chip8_state);
   // Temporary until i fix the clockspeed
   SDL_Delay(10);
 

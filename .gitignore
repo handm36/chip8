@@ -1,3 +1,4 @@
 build/
 roms/
 chip8
+.gdb_history
