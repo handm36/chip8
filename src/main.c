@@ -15,6 +15,7 @@
 
 Chip8_state chip8_state = {0};
 uint64_t last_time_timers;
+uint64_t last_time_frame;
 
 static SDL_AppResult parse_file(char *path) {
   FILE *file_ptr = fopen(path, "rb");
@@ -57,7 +58,7 @@ static SDL_AppResult parse_file(char *path) {
   return SDL_APP_CONTINUE;
 }
 
-void update_timers() {
+static void update_timers() {
   uint64_t curr_time = SDL_GetTicks();
   // 1000ms per 60hz
   if (curr_time > last_time_timers + (1000 / 60)) {
@@ -93,6 +94,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 
   populate_chip8_state(&chip8_state);
   last_time_timers = SDL_GetTicks();
+  last_time_frame = SDL_GetTicksNS();
 
   if (init_buzzer() == SDL_APP_FAILURE)
     return SDL_APP_FAILURE;
@@ -101,24 +103,28 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 }
 
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
-  if (event->type == SDL_EVENT_QUIT) {
-    return SDL_APP_SUCCESS;
-  }
-  return SDL_APP_CONTINUE;
+  return handle_input(event, &chip8_state);
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
-  if (chip8_state.sound != 0)
-    play_buzzer(&chip8_state);
-  // Temporary until i fix the clockspeed
-  SDL_Delay(10);
+  for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++)
+    run_cpu(&chip8_state);
+
+  update_timers();
 
   if (render_frame(&chip8_state) == SDL_APP_FAILURE)
     return SDL_APP_FAILURE;
 
-  update_timers();
-  run_cpu(&chip8_state);
+  if (chip8_state.sound != 0)
+    play_buzzer(&chip8_state);
 
+  // 1.0e9/60 is the nanoseconds it takes to do 60 fps
+  uint64_t elapsed = SDL_GetTicksNS() - last_time_frame;
+  uint64_t ns_per_fps = (uint64_t)(1.0e9 / 60);
+  if (elapsed < ns_per_fps)
+    SDL_DelayNS(ns_per_fps - elapsed);
+
+  last_time_frame = SDL_GetTicksNS();
   return SDL_APP_CONTINUE;
 }
 

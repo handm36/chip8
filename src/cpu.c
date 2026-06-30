@@ -1,4 +1,6 @@
 #include "chip8.h"
+#include <SDL3/SDL_stdinc.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -24,7 +26,7 @@ void run_cpu(Chip8_state *chip8_state) {
       for (int i = 0; i < DISPLAY_HEIGHT; i++)
         chip8_state->display[i] = 0;
 
-    } else {
+    } else if (second_byte_instruction == 0xEE) {
       // 00EE ret instruction
       chip8_state->PC = chip8_state->stack[chip8_state->SP];
       if (chip8_state->SP != 0)
@@ -148,9 +150,27 @@ void run_cpu(Chip8_state *chip8_state) {
       break;
     }
     break;
+  case 9:
+    // 9xy0 skip instruction if the value of register Vx is not equal to the
+    // value of register Vy
+    if (chip8_state->V[second_4_bits_instruction] !=
+        chip8_state->V[third_4_bits_instruction])
+      chip8_state->PC = chip8_state->PC + 2;
+    break;
   case 0xA:
     // Annn ld or load value into I
     chip8_state->I = (second_4_bits_instruction << 8) | second_byte_instruction;
+    break;
+  case 0xB:
+    // Bnnn jump NNN + v0
+    chip8_state->PC =
+        ((second_4_bits_instruction << 8) | second_byte_instruction) +
+        chip8_state->V[0];
+    return;
+  case 0xC:
+    // CxNN set Vx to a random number with NN as the mask
+    chip8_state->V[second_4_bits_instruction] =
+        SDL_rand(256) & second_byte_instruction;
     break;
   case 0xD:
     // Dxyn draws sprite onto the display
@@ -181,8 +201,31 @@ void run_cpu(Chip8_state *chip8_state) {
       chip8_state->display[y] = chip8_state->display[y] ^ translated_sprite;
     }
     break;
+  case 0xE:
+    switch (second_byte_instruction) {
+    case 0x9E:
+      // Ex9E skip the next instruction if the key in Vx is held
+      if (chip8_state->keypad[chip8_state->V[second_4_bits_instruction]] == 1)
+        chip8_state->PC = chip8_state->PC + 2;
+      break;
+    case 0xA1:
+      // ExA1 skip the next instruction if the key in Vx is not held
+      if (chip8_state->keypad[chip8_state->V[second_4_bits_instruction]] == 0)
+        chip8_state->PC = chip8_state->PC + 2;
+      break;
+    }
+    break;
   case 0xF:
     switch (second_byte_instruction) {
+    case 0x07:
+      // Fx07 Vx = delay
+      chip8_state->V[second_4_bits_instruction] = chip8_state->delay;
+      break;
+
+    case 0x15:
+      // Fx15 delay = Vx
+      chip8_state->delay = chip8_state->V[second_4_bits_instruction];
+      break;
     case 0x18:
       // Fx18 sound = Vx
       chip8_state->sound = chip8_state->V[second_4_bits_instruction];
@@ -191,6 +234,13 @@ void run_cpu(Chip8_state *chip8_state) {
       // Fx1E I = I + Vx
       chip8_state->I =
           chip8_state->I + chip8_state->V[second_4_bits_instruction];
+      break;
+    case 0x29:
+      // Fx29 set I to the memory address of the sprite data corresponding to
+      // the hexadecimal digit stored in register Vx
+
+      // * 5 cause the offset between sprites is 5
+      chip8_state->I = chip8_state->V[second_4_bits_instruction] * 5;
       break;
     case 0x33:
       // Fx33 place the ones in I+2, the tens in I+1, and the hundreds in I of

@@ -1,7 +1,8 @@
 #pragma once
 #include <stdint.h>
 
-#define CLOCK_SPEED 600 // in hz
+#define INSTRUCTIONS_PER_FRAME 5
+#define KEYPAD_SIZE 16
 #define RAM_SIZE 4096
 #define STACK_SIZE 16
 #define REGISTER_SIZE 16
@@ -17,6 +18,7 @@ typedef struct {
   uint16_t stack[STACK_SIZE];
   uint8_t ram[RAM_SIZE];
   uint8_t V[REGISTER_SIZE];
+  uint8_t keypad[KEYPAD_SIZE];
   uint8_t SP;
   uint8_t delay;
   uint8_t sound;
