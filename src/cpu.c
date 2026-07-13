@@ -4,6 +4,10 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#ifdef DEBUG_MODE
+#include <SDL3/SDL.h>
+#endif
+
 void run_cpu(Chip8_state *chip8_state) {
   uint16_t temp;
   uint64_t translated_sprite;
@@ -20,6 +24,20 @@ void run_cpu(Chip8_state *chip8_state) {
   uint8_t third_4_bits_instruction = (second_byte_instruction & 0xF0) >> 4;
   uint8_t forth_4_bits_instruction = second_byte_instruction & 0x0F;
 
+#ifdef DEBUG_MODE
+  SDL_Log("Curr instruction: %02x %02x\n\n", first_byte_instruction,
+          second_byte_instruction);
+
+  SDL_Log("PC: %04x\n\n", chip8_state->PC);
+
+  SDL_Log("I: %04x\n\n", chip8_state->I);
+
+  for (int i = 0; i < REGISTER_SIZE; i++)
+    SDL_Log("V%d: %02x\n", i, chip8_state->V[i]);
+
+  SDL_Log("\n");
+#endif
+
   if (first_byte_instruction == 0x00) {
     if (second_byte_instruction == 0xE0) {
       // 00E0 cls instruction
@@ -29,8 +47,9 @@ void run_cpu(Chip8_state *chip8_state) {
     } else if (second_byte_instruction == 0xEE) {
       // 00EE ret instruction
       chip8_state->PC = chip8_state->stack[chip8_state->SP];
-      if (chip8_state->SP != 0)
+      if (chip8_state->SP != 0) {
         chip8_state->SP = chip8_state->SP - 1;
+      }
     }
   }
 
@@ -42,7 +61,7 @@ void run_cpu(Chip8_state *chip8_state) {
     return;
   case 0x2:
     // 2nnn call instruction
-    if (chip8_state->SP != 0)
+    if (chip8_state->SP != STACK_SIZE)
       chip8_state->SP = chip8_state->SP + 1;
 
     chip8_state->stack[chip8_state->SP] = chip8_state->PC;
@@ -103,50 +122,54 @@ void run_cpu(Chip8_state *chip8_state) {
       // 8xy4 + Vx = Vx + Vy
       temp = (uint16_t)chip8_state->V[second_4_bits_instruction] +
              (uint16_t)chip8_state->V[third_4_bits_instruction];
+
+      chip8_state->V[second_4_bits_instruction] = temp & 0xFF;
+
       if (temp > 0xFF)
         chip8_state->V[0xF] = 1;
       else
         chip8_state->V[0xF] = 0;
-
-      chip8_state->V[second_4_bits_instruction] = temp & 0xFF;
       break;
     case 5:
       // 8xy5 - Vx = Vx - Vy
-      if (chip8_state->V[second_4_bits_instruction] >
-          chip8_state->V[third_4_bits_instruction])
+      temp = chip8_state->V[second_4_bits_instruction];
+
+      chip8_state->V[second_4_bits_instruction] =
+          temp - chip8_state->V[third_4_bits_instruction];
+
+      if (temp >= chip8_state->V[third_4_bits_instruction])
         chip8_state->V[0xF] = 1;
       else
         chip8_state->V[0xF] = 0;
-
-      chip8_state->V[second_4_bits_instruction] =
-          chip8_state->V[second_4_bits_instruction] -
-          chip8_state->V[third_4_bits_instruction];
       break;
     case 6:
       // 8xy6 shift right
       // VF is set to the last bit before the right shift
-      chip8_state->V[0xF] = chip8_state->V[third_4_bits_instruction] & 0x1;
+      temp = chip8_state->V[third_4_bits_instruction] & 0x1;
       chip8_state->V[second_4_bits_instruction] =
           chip8_state->V[third_4_bits_instruction] >> 1;
+      chip8_state->V[0xF] = temp;
       break;
     case 7:
       // 8xy7 - Vx = Vy - Vx
-      if (chip8_state->V[second_4_bits_instruction] <
-          chip8_state->V[third_4_bits_instruction])
-        chip8_state->V[0xF] = 1;
-      else
-        chip8_state->V[0xF] = 0;
+      temp = chip8_state->V[second_4_bits_instruction];
 
       chip8_state->V[second_4_bits_instruction] =
           chip8_state->V[third_4_bits_instruction] -
           chip8_state->V[second_4_bits_instruction];
+
+      if (chip8_state->V[third_4_bits_instruction] >= temp)
+        chip8_state->V[0xF] = 1;
+      else
+        chip8_state->V[0xF] = 0;
       break;
     case 0xE:
       // 8xyE shift left
       // VF is set to the first bit before the left shift
-      chip8_state->V[0xF] = chip8_state->V[third_4_bits_instruction] & 0x80;
+      temp = !!(chip8_state->V[second_4_bits_instruction] & 0x80);
       chip8_state->V[second_4_bits_instruction] =
           chip8_state->V[third_4_bits_instruction] << 1;
+      chip8_state->V[0xF] = temp;
       break;
     }
     break;
@@ -221,7 +244,9 @@ void run_cpu(Chip8_state *chip8_state) {
       // Fx07 Vx = delay
       chip8_state->V[second_4_bits_instruction] = chip8_state->delay;
       break;
-
+    case 0x0A:
+      // Fx0A wait for a keypress and store result in Vx
+      break;
     case 0x15:
       // Fx15 delay = Vx
       chip8_state->delay = chip8_state->V[second_4_bits_instruction];

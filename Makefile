@@ -7,6 +7,9 @@ TARGET = chip8
 
 all: $(TARGET)
 
+debug: CFLAGS += -DDEBUG_MODE
+debug: $(TARGET)	
+
 build/%.o: src/%.c 
 	mkdir -p build
 	$(CC) $(CFLAGS) -c $< -o $@

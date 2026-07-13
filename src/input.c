@@ -3,6 +3,10 @@
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_keycode.h>
 
+#ifdef DEBUG_MODE
+#include "cpu.h"
+#endif
+
 int handle_input(SDL_Event *event, Chip8_state *chip8_state) {
   switch (event->type) {
   case SDL_EVENT_QUIT:
@@ -109,6 +113,11 @@ int handle_input(SDL_Event *event, Chip8_state *chip8_state) {
     case SDLK_V:
       chip8_state->keypad[0xF] = 0;
       break;
+#ifdef DEBUG_MODE
+    case SDLK_RETURN:
+      run_cpu(chip8_state);
+      break;
+#endif
     }
     break;
   }

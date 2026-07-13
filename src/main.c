@@ -107,6 +107,16 @@ SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
+#ifdef DEBUG_MODE
+  if (render_frame(&chip8_state) == SDL_APP_FAILURE)
+    return SDL_APP_FAILURE;
+
+  if (chip8_state.sound != 0)
+    chip8_state.sound = chip8_state.sound - 1;
+
+  if (chip8_state.delay != 0)
+    chip8_state.delay = chip8_state.delay - 1;
+#else
   for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++)
     run_cpu(&chip8_state);
 
@@ -125,6 +135,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
     SDL_DelayNS(ns_per_fps - elapsed);
 
   last_time_frame = SDL_GetTicksNS();
+#endif
   return SDL_APP_CONTINUE;
 }
 
