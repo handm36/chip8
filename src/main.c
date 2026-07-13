@@ -117,8 +117,10 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
   if (chip8_state.delay != 0)
     chip8_state.delay = chip8_state.delay - 1;
 #else
-  for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++)
-    run_cpu(&chip8_state);
+  for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
+    if (run_cpu(&chip8_state) == SDL_APP_SUCCESS)
+      break;
+  }
 
   update_timers();
 
