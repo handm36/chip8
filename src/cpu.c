@@ -258,11 +258,20 @@ int run_cpu(Chip8_state *chip8_state) {
       break;
     case 0x0A:
       // Fx0A wait for a keypress and store result in Vx
+      if (chip8_state->wait_until_key_up != 0) {
+        if (chip8_state->keypad[chip8_state->wait_until_key_up] == 0) {
+          chip8_state->wait_until_key_up = 0;
+          chip8_state->PC = chip8_state->PC + 2;
+          return SDL_APP_CONTINUE;
+        } else {
+          return SDL_APP_SUCCESS;
+        }
+      }
+
       for (int i = 0; i < KEYPAD_SIZE; i++) {
         if (chip8_state->keypad[i] == 1) {
           chip8_state->V[second_4_bits_instruction] = i;
-          chip8_state->PC = chip8_state->PC + 2;
-          return SDL_APP_CONTINUE;
+          chip8_state->wait_until_key_up = i;
         }
       }
 

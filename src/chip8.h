@@ -22,6 +22,7 @@ typedef struct {
   uint8_t SP;
   uint8_t delay;
   uint8_t sound;
+  uint8_t wait_until_key_up; // stops execution on Fx0A if it doesnt equal 0
 } Chip8_state;
 
 void populate_chip8_state(Chip8_state *chip8_state);
