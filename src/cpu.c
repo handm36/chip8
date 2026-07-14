@@ -1,15 +1,12 @@
 #include "chip8.h"
 #include <SDL3/SDL_init.h>
-#include <SDL3/SDL_stdinc.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <sys/types.h>
 
 #ifdef DEBUG_MODE
 #include <SDL3/SDL.h>
 #endif
 
-int run_cpu(Chip8_state *chip8_state) {
+int run_cpu(Chip8_state *chip8_state, int display_wait_quirk,
+            int vf_reset_quirk, int wrapping_quirk) {
   uint16_t temp;
   uint64_t translated_sprite;
   uint8_t sprite;
@@ -106,21 +103,27 @@ int run_cpu(Chip8_state *chip8_state) {
       chip8_state->V[second_4_bits_instruction] =
           chip8_state->V[second_4_bits_instruction] |
           chip8_state->V[third_4_bits_instruction];
-      chip8_state->V[0xF] = 0;
+
+      if (vf_reset_quirk == 1)
+        chip8_state->V[0xF] = 0;
       break;
     case 2:
       // 8xy2 and Vx = Vx & Vy
       chip8_state->V[second_4_bits_instruction] =
           chip8_state->V[second_4_bits_instruction] &
           chip8_state->V[third_4_bits_instruction];
-      chip8_state->V[0xF] = 0;
+
+      if (vf_reset_quirk == 1)
+        chip8_state->V[0xF] = 0;
       break;
     case 3:
       // 8xy3 xor Vx = Vx ^ Vy
       chip8_state->V[second_4_bits_instruction] =
           chip8_state->V[second_4_bits_instruction] ^
           chip8_state->V[third_4_bits_instruction];
-      chip8_state->V[0xF] = 0;
+
+      if (vf_reset_quirk == 1)
+        chip8_state->V[0xF] = 0;
       break;
     case 4:
       // 8xy4 + Vx = Vx + Vy
@@ -201,30 +204,28 @@ int run_cpu(Chip8_state *chip8_state) {
     break;
   case 0xD:
     // Dxyn draws sprite onto the display
-    Vx = chip8_state->V[second_4_bits_instruction];
-    Vy = chip8_state->V[third_4_bits_instruction];
+    Vx = chip8_state->V[second_4_bits_instruction] % DISPLAY_WIDTH;
+    Vy = chip8_state->V[third_4_bits_instruction] % DISPLAY_HEIGHT;
     chip8_state->V[0xF] = 0;
-
-    if (Vx == DISPLAY_WIDTH)
-      Vx = 0;
-    else
-      Vx = Vx % DISPLAY_WIDTH;
-
-    if (Vy == DISPLAY_HEIGHT)
-      Vy = 0;
-    else
-      Vy = Vy % DISPLAY_HEIGHT;
 
     // forth_4_bits_instruction bc n is last
     for (int i = 0; i < forth_4_bits_instruction; i++) {
       sprite = chip8_state->ram[chip8_state->I + i];
 
       y = Vy + i;
-      if (y >= DISPLAY_HEIGHT)
-        break;
+      if (y >= DISPLAY_HEIGHT) {
+        if (wrapping_quirk == 1)
+          y = y - DISPLAY_HEIGHT;
+        else
+          break;
+      }
 
       // 64 - 8 = 56
       translated_sprite = ((uint64_t)sprite << 56) >> Vx;
+
+      if (wrapping_quirk && Vx >= 56)
+        translated_sprite = translated_sprite | (uint64_t)sprite
+                                                    << (64 - (Vx - 56));
 
       // collision check if Xor'd == Or'd then there isnt collision
       if ((chip8_state->display[y] ^ translated_sprite) !=
@@ -235,6 +236,10 @@ int run_cpu(Chip8_state *chip8_state) {
     }
 
     chip8_state->PC = chip8_state->PC + 2;
+
+    if (display_wait_quirk == 1)
+      return SDL_APP_SUCCESS;
+
     return SDL_APP_CONTINUE;
   case 0xE:
     switch (second_byte_instruction) {

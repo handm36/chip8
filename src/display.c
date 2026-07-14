@@ -1,9 +1,6 @@
 #include "display.h"
 #include "chip8.h"
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_init.h>
-#include <SDL3/SDL_render.h>
-#include <SDL3/SDL_surface.h>
 #include <stdint.h>
 
 static SDL_Window *window = NULL;

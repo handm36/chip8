@@ -1,6 +1,5 @@
 #include "audio.h"
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_init.h>
 
 static SDL_AudioStream *stream = NULL;
 static int current_sine_sample = 0;

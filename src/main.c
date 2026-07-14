@@ -1,5 +1,3 @@
-#include <SDL3/SDL_timer.h>
-#include <sys/types.h>
 #define SDL_MAIN_USE_CALLBACKS 1
 #include "audio.h"
 #include "chip8.h"
@@ -7,21 +5,87 @@
 #include "display.h"
 #include "input.h"
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_error.h>
-#include <SDL3/SDL_init.h>
 #include <SDL3/SDL_main.h>
+#include <getopt.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 Chip8_state chip8_state = {0};
 uint64_t last_time_timers;
 uint64_t last_time_frame;
 
+int display_wait_quirk = 0; // 1 if option is selected
+int vf_reset_quirk = 0;
+int wrapping_quirk = 0;
+int mute = 0;
+int cycles_per_frame = INSTRUCTIONS_PER_FRAME;
+char *file_path;
+
+static void print_usage(char *app_name) {
+  SDL_Log("Usage: %s [options] <rom file>\n\n"
+          "Options:\n   "
+          "--vf-reset,        -r   Enable the Vf reset quirk\n   "
+          "--disp-wait,       -d   Enable the display wait quirk\n   "
+          "--wrap,            -w   Enable the wrapping quirk\n   "
+          "--cycles <cycles>, -c   Set the cycles per frame\n   "
+          "--file <path>,     -f   Set the chip 8 rom file path\n   "
+          "--mute,            -m   Mutes the buzzer",
+          app_name);
+}
+
+static int handle_args(int argc, char *argv[]) {
+  int opt;
+  int opt_i;
+  static struct option options[] = {{"vf-reset", no_argument, 0, 'r'},
+                                    {"disp-wait", no_argument, 0, 'd'},
+                                    {"wrap", no_argument, 0, 'w'},
+                                    {"cycles", required_argument, 0, 'c'},
+                                    {"file", required_argument, 0, 'f'},
+                                    {"mute", no_argument, 0, 'm'}};
+
+  while ((opt = getopt_long(argc, argv, "dc:f:mrw", options, &opt_i)) != -1) {
+    switch (opt) {
+    case 'r':
+      vf_reset_quirk = 1;
+      break;
+    case 'd':
+      display_wait_quirk = 1;
+      break;
+    case 'w':
+      wrapping_quirk = 1;
+      break;
+    case 'c':
+      cycles_per_frame = atoi(optarg);
+      if (cycles_per_frame == 0) {
+        SDL_Log("Invalid cycles per frame.\n");
+        print_usage(argv[0]);
+        return SDL_APP_FAILURE;
+      }
+      break;
+    case 'f':
+      file_path = optarg;
+      break;
+    case 'm':
+      mute = 1;
+      break;
+    case '?':
+      print_usage(argv[0]);
+      return SDL_APP_FAILURE;
+    }
+  }
+
+  if (!file_path && optind < argc)
+    file_path = argv[optind];
+
+  return SDL_APP_SUCCESS;
+}
+
 static SDL_AppResult parse_file(char *path) {
   FILE *file_ptr = fopen(path, "rb");
 
   if (file_ptr == NULL) {
-    SDL_Log("Failed to open file\n");
+    SDL_Log("No file specified\n");
     return SDL_APP_FAILURE;
   }
 
@@ -73,18 +137,18 @@ static void update_timers() {
 }
 
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
+  if (handle_args(argc, argv) == SDL_APP_FAILURE)
+    return SDL_APP_FAILURE;
+
+  if (parse_file(file_path) == SDL_APP_FAILURE) {
+    print_usage(argv[0]);
+    return SDL_APP_FAILURE;
+  }
+
   if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
     SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
     return SDL_APP_FAILURE;
   }
-
-  if (argc != 2) {
-    SDL_Log("Usage: %s <rom file>\n", argv[0]);
-    return SDL_APP_FAILURE;
-  }
-
-  if (parse_file(argv[1]) == SDL_APP_FAILURE)
-    return SDL_APP_FAILURE;
 
   SDL_SetAppMetadata("Chip 8", "1.0", "com.chip8");
 
@@ -117,20 +181,25 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
   if (chip8_state.delay != 0)
     chip8_state.delay = chip8_state.delay - 1;
 #else
-  for (int i = 0; i < INSTRUCTIONS_PER_FRAME; i++) {
-    if (run_cpu(&chip8_state) == SDL_APP_SUCCESS)
+  for (int i = 0; i < cycles_per_frame; i++) {
+    if (run_cpu(&chip8_state, display_wait_quirk, vf_reset_quirk,
+                wrapping_quirk) ==
+        SDL_APP_SUCCESS) // SDL_APP_SUCCESS signals early exit for instructions
+                         // like Dxyn and Fx0A
       break;
   }
-
-  update_timers();
 
   if (render_frame(&chip8_state) == SDL_APP_FAILURE)
     return SDL_APP_FAILURE;
 
-  if (chip8_state.sound == 0)
-    stop_buzzer();
-  else
-    play_buzzer();
+  update_timers();
+
+  if (mute == 0) {
+    if (chip8_state.sound == 0)
+      stop_buzzer();
+    else
+      play_buzzer();
+  }
 
   // 1.0e9/60 is the nanoseconds it takes to do 60 fps
   uint64_t elapsed = SDL_GetTicksNS() - last_time_frame;
