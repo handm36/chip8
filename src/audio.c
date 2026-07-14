@@ -1,11 +1,11 @@
-#include "chip8.h"
+#include "audio.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_init.h>
 
 static SDL_AudioStream *stream = NULL;
 static int current_sine_sample = 0;
 
-void play_buzzer(Chip8_state *chip8_state) {
+void play_buzzer() {
   const int minimum_audio = (8000 * sizeof(float)) / 2;
 
   if (SDL_GetAudioStreamQueued(stream) < minimum_audio) {
@@ -24,6 +24,8 @@ void play_buzzer(Chip8_state *chip8_state) {
     SDL_PutAudioStreamData(stream, samples, sizeof(samples));
   }
 }
+
+void stop_buzzer() { SDL_ClearAudioStream(stream); }
 
 int init_buzzer() {
   SDL_AudioSpec spec;

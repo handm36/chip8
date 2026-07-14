@@ -127,8 +127,10 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
   if (render_frame(&chip8_state) == SDL_APP_FAILURE)
     return SDL_APP_FAILURE;
 
-  if (chip8_state.sound != 0)
-    play_buzzer(&chip8_state);
+  if (chip8_state.sound == 0)
+    stop_buzzer();
+  else
+    play_buzzer();
 
   // 1.0e9/60 is the nanoseconds it takes to do 60 fps
   uint64_t elapsed = SDL_GetTicksNS() - last_time_frame;

@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#define INSTRUCTIONS_PER_FRAME 15
+#define INSTRUCTIONS_PER_FRAME 11
 #define KEYPAD_SIZE 16
 #define RAM_SIZE 4096
 #define STACK_SIZE 16

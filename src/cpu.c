@@ -235,7 +235,7 @@ int run_cpu(Chip8_state *chip8_state) {
     }
 
     chip8_state->PC = chip8_state->PC + 2;
-    return SDL_APP_SUCCESS;
+    return SDL_APP_CONTINUE;
   case 0xE:
     switch (second_byte_instruction) {
     case 0x9E:
