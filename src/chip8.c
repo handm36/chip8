@@ -2,6 +2,7 @@
 
 void populate_chip8_state(Chip8_state *chip8_state) {
   chip8_state->PC = 0x200;
+  chip8_state->wait_until_key_up = 0xFF;
 
   // sprite 0
   chip8_state->ram[0] = 0xF0;

@@ -113,7 +113,7 @@ int handle_input(SDL_Event *event, Chip8_state *chip8_state) {
       break;
 #ifdef DEBUG_MODE
     case SDLK_RETURN:
-      run_cpu(chip8_state, 0, 0, 0);
+      run_cpu(chip8_state, 0, 0, 0, 0);
       break;
 #endif
     }

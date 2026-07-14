@@ -6,7 +6,7 @@
 #endif
 
 int run_cpu(Chip8_state *chip8_state, int display_wait_quirk,
-            int vf_reset_quirk, int wrapping_quirk) {
+            int vf_reset_quirk, int wrapping_quirk, int shift_quirk) {
   uint16_t temp;
   uint64_t translated_sprite;
   uint8_t sprite;
@@ -48,6 +48,8 @@ int run_cpu(Chip8_state *chip8_state, int display_wait_quirk,
       if (chip8_state->SP != 0) {
         chip8_state->SP = chip8_state->SP - 1;
       }
+
+      return SDL_APP_CONTINUE;
     }
   } else {
 
@@ -59,10 +61,10 @@ int run_cpu(Chip8_state *chip8_state, int display_wait_quirk,
       return SDL_APP_CONTINUE;
     case 0x2:
       // 2nnn call instruction
-      if (chip8_state->SP != STACK_SIZE)
+      if (chip8_state->SP != STACK_SIZE - 1)
         chip8_state->SP = chip8_state->SP + 1;
 
-      chip8_state->stack[chip8_state->SP] = chip8_state->PC;
+      chip8_state->stack[chip8_state->SP] = chip8_state->PC + 2;
       chip8_state->PC =
           (second_4_bits_instruction << 8) | second_byte_instruction;
       return SDL_APP_CONTINUE;
@@ -152,9 +154,15 @@ int run_cpu(Chip8_state *chip8_state, int display_wait_quirk,
       case 6:
         // 8xy6 shift right
         // VF is set to the last bit before the right shift
-        temp = chip8_state->V[third_4_bits_instruction] & 0x1;
-        chip8_state->V[second_4_bits_instruction] =
-            chip8_state->V[third_4_bits_instruction] >> 1;
+        if (shift_quirk == 1) {
+          temp = chip8_state->V[second_4_bits_instruction] & 0x1;
+          chip8_state->V[second_4_bits_instruction] =
+              chip8_state->V[second_4_bits_instruction] >> 1;
+        } else {
+          temp = chip8_state->V[third_4_bits_instruction] & 0x1;
+          chip8_state->V[second_4_bits_instruction] =
+              chip8_state->V[third_4_bits_instruction] >> 1;
+        }
         chip8_state->V[0xF] = temp;
         break;
       case 7:
@@ -173,9 +181,15 @@ int run_cpu(Chip8_state *chip8_state, int display_wait_quirk,
       case 0xE:
         // 8xyE shift left
         // VF is set to the first bit before the left shift
-        temp = !!(chip8_state->V[second_4_bits_instruction] & 0x80);
-        chip8_state->V[second_4_bits_instruction] =
-            chip8_state->V[third_4_bits_instruction] << 1;
+        if (shift_quirk == 1) {
+          temp = !!(chip8_state->V[second_4_bits_instruction] & 0x80);
+          chip8_state->V[second_4_bits_instruction] =
+              chip8_state->V[second_4_bits_instruction] << 1;
+        } else {
+          temp = !!(chip8_state->V[third_4_bits_instruction] & 0x80);
+          chip8_state->V[second_4_bits_instruction] =
+              chip8_state->V[third_4_bits_instruction] << 1;
+        }
         chip8_state->V[0xF] = temp;
         break;
       }
@@ -224,7 +238,7 @@ int run_cpu(Chip8_state *chip8_state, int display_wait_quirk,
         // 64 - 8 = 56
         translated_sprite = ((uint64_t)sprite << 56) >> Vx;
 
-        if (wrapping_quirk && Vx >= 56)
+        if (wrapping_quirk && Vx > 56)
           translated_sprite = translated_sprite | (uint64_t)sprite
                                                       << (64 - (Vx - 56));
 
@@ -264,9 +278,9 @@ int run_cpu(Chip8_state *chip8_state, int display_wait_quirk,
         break;
       case 0x0A:
         // Fx0A wait for a keypress and store result in Vx
-        if (chip8_state->wait_until_key_up != 0) {
+        if (chip8_state->wait_until_key_up != 0xFF) {
           if (chip8_state->keypad[chip8_state->wait_until_key_up] == 0) {
-            chip8_state->wait_until_key_up = 0;
+            chip8_state->wait_until_key_up = 0xFF;
             chip8_state->PC = chip8_state->PC + 2;
             return SDL_APP_CONTINUE;
           } else {

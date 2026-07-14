@@ -1,4 +1,3 @@
-#include <sys/types.h>
 #define SDL_MAIN_USE_CALLBACKS 1
 #include "audio.h"
 #include "chip8.h"
@@ -20,33 +19,33 @@ int display_wait_quirk = 0; // 1 if option is selected
 int vf_reset_quirk = 0;
 int wrapping_quirk = 0;
 int mute = 0;
+int shift_quirk = 0;
 int cycles_per_frame = INSTRUCTIONS_PER_FRAME;
 char *file_path;
 
 static void print_usage(char *app_name) {
   SDL_Log("Usage: %s [options] <rom file>\n\n"
           "Options:\n   "
-          "--vf-reset,        -r   Enable the Vf reset quirk\n   "
-          "--disp-wait,       -d   Enable the display wait quirk\n   "
-          "--wrap,            -w   Enable the wrapping quirk\n   "
           "--cycles <cycles>, -c   Set the cycles per frame\n   "
+          "--disp-wait,       -d   Enable the display wait quirk\n   "
           "--file <path>,     -f   Set the chip 8 rom file path\n   "
-          "--mute,            -m   Mutes the buzzer",
+          "--mute,            -m   Mutes the buzzer\n   "
+          "--shift,           -s   Enable the shift quirk\n   "
+          "--vf-reset,        -r   Enable the Vf reset quirk\n   "
+          "--wrap,            -w   Enable the wrapping quirk\n   ",
           app_name);
 }
 
 static int handle_args(int argc, char *argv[]) {
   int opt;
   int opt_i;
-  static struct option options[] = {{"vf-reset", no_argument, 0, 'r'},
-                                    {"disp-wait", no_argument, 0, 'd'},
-                                    {"wrap", no_argument, 0, 'w'},
-                                    {"cycles", required_argument, 0, 'c'},
-                                    {"file", required_argument, 0, 'f'},
-                                    {"mute", no_argument, 0, 'm'},
-                                    {0, 0, 0, 0}};
+  static struct option options[] = {
+      {"cycles", required_argument, 0, 'c'}, {"disp-wait", no_argument, 0, 'd'},
+      {"file", required_argument, 0, 'f'},   {"mute", no_argument, 0, 'm'},
+      {"shift", no_argument, 0, 's'},        {"vf-reset", no_argument, 0, 'r'},
+      {"wrap", no_argument, 0, 'w'},         {0, 0, 0, 0}};
 
-  while ((opt = getopt_long(argc, argv, "dc:f:mrw", options, &opt_i)) != -1) {
+  while ((opt = getopt_long(argc, argv, "rdwsc:f:m", options, &opt_i)) != -1) {
     switch (opt) {
     case 'r':
       vf_reset_quirk = 1;
@@ -56,6 +55,9 @@ static int handle_args(int argc, char *argv[]) {
       break;
     case 'w':
       wrapping_quirk = 1;
+      break;
+    case 's':
+      shift_quirk = 1;
       break;
     case 'c':
       cycles_per_frame = atoi(optarg);
@@ -184,7 +186,7 @@ SDL_AppResult SDL_AppIterate(void *appstate) {
 #else
   for (int i = 0; i < cycles_per_frame; i++) {
     if (run_cpu(&chip8_state, display_wait_quirk, vf_reset_quirk,
-                wrapping_quirk) ==
+                wrapping_quirk, shift_quirk) ==
         SDL_APP_SUCCESS) // SDL_APP_SUCCESS signals early exit for instructions
                          // like Dxyn and Fx0A
       break;
