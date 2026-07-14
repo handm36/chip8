@@ -43,7 +43,8 @@ static int handle_args(int argc, char *argv[]) {
                                     {"wrap", no_argument, 0, 'w'},
                                     {"cycles", required_argument, 0, 'c'},
                                     {"file", required_argument, 0, 'f'},
-                                    {"mute", no_argument, 0, 'm'}};
+                                    {"mute", no_argument, 0, 'm'},
+                                    {0, 0, 0, 0}};
 
   while ((opt = getopt_long(argc, argv, "dc:f:mrw", options, &opt_i)) != -1) {
     switch (opt) {
