@@ -1,6 +1,6 @@
 # Chip 8 Emulator made in C and SDL3
 
-<video src="https://github.com/user-attachments/assets/736835b3-ef8e-4a1d-9843-084bfe1cdbe7" width="100%" autoplay loop muted playsinline></video>
+<video src="https://github.com/user-attachments/assets/6a3bf920-9a16-40b7-beb8-e2b8fac7ecab" width="100%" autoplay loop muted playsinline></video>
 
 ## Requirements
 
