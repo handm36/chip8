@@ -11,7 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-Chip8_state chip8_state = {0};
+Chip8_state chip8 = {0};
 uint64_t last_time_timers;
 uint64_t last_time_frame;
 
@@ -115,7 +115,7 @@ static SDL_AppResult parse_file(char *path) {
   }
   fseek(file_ptr, 0, SEEK_SET);
 
-  size_t ret = fread(&(chip8_state.ram[0x200]), 1, size, file_ptr);
+  size_t ret = fread(&(chip8.ram[0x200]), 1, size, file_ptr);
   if (ret != size) {
     fclose(file_ptr);
     SDL_Log("Failed to read file\n");
@@ -131,11 +131,11 @@ static void update_timers() {
   if (SDL_GetTicksNS() > last_time_timers + (uint64_t)(1.0e9 / 60)) {
     last_time_timers = SDL_GetTicksNS();
 
-    if (chip8_state.sound != 0)
-      chip8_state.sound = chip8_state.sound - 1;
+    if (chip8.sound != 0)
+      chip8.sound = chip8.sound - 1;
 
-    if (chip8_state.delay != 0)
-      chip8_state.delay = chip8_state.delay - 1;
+    if (chip8.delay != 0)
+      chip8.delay = chip8.delay - 1;
   }
 }
 
@@ -159,7 +159,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
     return SDL_APP_FAILURE;
   }
 
-  populate_chip8_state(&chip8_state);
+  populate_chip8_state(&chip8);
   last_time_timers = SDL_GetTicksNS();
   last_time_frame = SDL_GetTicksNS();
 
@@ -170,35 +170,35 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[]) {
 }
 
 SDL_AppResult SDL_AppEvent(void *appstate, SDL_Event *event) {
-  return handle_input(event, &chip8_state);
+  return handle_input(event, &chip8);
 }
 
 SDL_AppResult SDL_AppIterate(void *appstate) {
 #ifdef DEBUG_MODE
-  if (render_frame(&chip8_state) == SDL_APP_FAILURE)
+  if (render_frame(&chip8) == SDL_APP_FAILURE)
     return SDL_APP_FAILURE;
 
-  if (chip8_state.sound != 0)
-    chip8_state.sound = chip8_state.sound - 1;
+  if (chip8.sound != 0)
+    chip8.sound = chip8.sound - 1;
 
-  if (chip8_state.delay != 0)
-    chip8_state.delay = chip8_state.delay - 1;
+  if (chip8.delay != 0)
+    chip8.delay = chip8.delay - 1;
 #else
+  update_timers();
+
   for (int i = 0; i < cycles_per_frame; i++) {
-    if (run_cpu(&chip8_state, display_wait_quirk, vf_reset_quirk,
-                wrapping_quirk, shift_quirk) ==
+    if (run_cpu(&chip8, display_wait_quirk, vf_reset_quirk, wrapping_quirk,
+                shift_quirk) ==
         SDL_APP_SUCCESS) // SDL_APP_SUCCESS signals early exit for instructions
                          // like Dxyn and Fx0A
       break;
   }
 
-  if (render_frame(&chip8_state) == SDL_APP_FAILURE)
+  if (render_frame(&chip8) == SDL_APP_FAILURE)
     return SDL_APP_FAILURE;
 
-  update_timers();
-
   if (mute == 0) {
-    if (chip8_state.sound == 0)
+    if (chip8.sound == 0)
       stop_buzzer();
     else
       play_buzzer();

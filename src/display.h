@@ -10,4 +10,4 @@
 #define COLOR_HEX 0x88C0D0FF
 
 int init_display();
-int render_frame(Chip8_state *chip8_state);
+int render_frame(Chip8_state *chip8);

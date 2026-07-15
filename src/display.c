@@ -40,8 +40,8 @@ int init_display() {
   return SDL_APP_CONTINUE;
 }
 
-int render_frame(Chip8_state *chip8_state) {
-  bitmap_to_RGBA(chip8_state->display, &pixels);
+int render_frame(Chip8_state *chip8) {
+  bitmap_to_RGBA(chip8->display, &pixels);
 
   if (!SDL_UpdateTexture(texture, NULL, pixels,
                          DISPLAY_WIDTH * sizeof(uint32_t))) {
